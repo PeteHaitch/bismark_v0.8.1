@@ -47,9 +47,11 @@ python comethylation_v3.py --nTuple 1 --methylationType CG --overlappingPairedEn
 
 python comethylation_v3.py --nTuple 1 --methylationType CG --overlappingPairedEndCheck none test_data/QS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bam test_data/new_flag_filter=none &> test_data/log/new_flag_filter=none.log
 
-#### Run bismark_methylation_extractor and bismark2bedGraph on CS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bam and CS_old_flag.SRR400564_1.fastq.gz_bismark_pe.bam (have to manually invoke bismark2bedGraph since it is not in my $PATH ####
-perl bismark2bedGraph --o CS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bam.bedGraph --dir test_data/ --counts --buffer_size 20G test_data/CpG_*_new*
+#### Run bismark_methylation_extractor and bismark2bedGraph on CS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bam and CS_old_flag.SRR400564_1.fastq.gz_bismark_pe.bam ####
+./bismark_methylation_extractor -p --no_overlap --ignore 0 --ignore_r2 0 --merge_non_CpG -o test_data --bedGraph --counts --buffer_size 10G test_data/CS_old_flag.SRR400564_1.fastq.gz_bismark_pe.bam
 
-perl bismark2bedGraph --o CS_old_flag.SRR400564_1.fastq.gz_bismark_pe.bam.bedGraph --dir test_data/ --counts --buffer_size 20G test_data/CpG_*_old*
+./bismark_methylation_extractor -p --no_overlap --ignore 0 --ignore_r2 0 --merge_non_CpG -o test_data --bedGraph --counts --buffer_size 10G test_data/CS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bam
 
 #### Explore results in R (see test_data/explore_methylation_calling.r) ####
+
+
