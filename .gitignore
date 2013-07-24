@@ -5,3 +5,4 @@ test_data/*.bam
 test_data/*.bai
 test_data/*.bedGraph
 test_data/*.png
+test_data/log/
