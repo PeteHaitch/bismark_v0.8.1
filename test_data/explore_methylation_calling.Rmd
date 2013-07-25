@@ -1,0 +1,116 @@
+Explore methylation calling using Bismark and the effect of the `--new_flag` option
+========================================================
+Peter Hickey (peter.hickey@gmail.com)
+25/07/2013
+
+Explore the differences in the methylation calls between bismark (v0.8.1) with and without the `--new_flag` option when using the `bismark_methylation_extractor` and my `comethylation_v3.py` scripts.
+
+Load data
+----------------
+```{r}
+#### Load libraries ####
+library(GenomicRanges)
+library(Biostrings)
+
+#### Do we want to read in the data afresh or load the data from an RData file ####
+load_RData <- FALSE
+
+if(!load_RData){
+  #### DO ONCE: Read in data, convert to list of data.frames and list of GRanges  and save as RData object ####
+  x <- list(new_flag_XM_filter = read.table('new_flag_filter=XM.wf', header = T, sep = '\t', stringsAsFactors = FALSE),
+          new_flag_sequence_filter = read.table('new_flag_filter=sequence.wf', header = T, sep = '\t', stringsAsFactors = FALSE),
+          new_flag_bismark_filter = read.table('new_flag_filter=bismark.wf', header = T, sep = '\t', stringsAsFactors = FALSE), 
+          new_flag_no_filter = read.table('new_flag_filter=none.wf', header = T, sep = '\t', stringsAsFactors = FALSE),
+          CS_new_flag_methylation_extractor = read.table('CS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bedGraph', header = F, stringsAsFactors = FALSE, sep = '\t'),
+          CS_old_flag_methylation_extractor = read.table('CS_old_flag.SRR400564_1.fastq.gz_bismark_pe.bedGraph', header = F, stringsAsFactors = FALSE, sep = '\t'),
+          QS_new_flag_methylation_extractor = read.table('QS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bedGraph', header = F, stringsAsFactors = FALSE, sep = '\t'),
+          QS_old_flag_methylation_extractor = read.table('QS_old_flag.SRR400564_1.fastq.gz_bismark_pe.bedGraph', header = F, stringsAsFactors = FALSE, sep = '\t')
+)
+  y <- list(new_flag_XM_filter = sort(GRanges(seqnames = x[['new_flag_XM_filter']][, 'chr'], ranges = IRanges(start = x[['new_flag_XM_filter']][, 'pos1'], width = 1), M = x[['new_flag_XM_filter']][, 'M'], U = x[['new_flag_XM_filter']][, 'U'])),
+          new_flag_sequence_filter = sort(GRanges(seqnames = x[['new_flag_sequence_filter']][, 'chr'], ranges = IRanges(start = x[['new_flag_sequence_filter']][, 'pos1'], width = 1), M = x[['new_flag_sequence_filter']][, 'M'], U = x[['new_flag_sequence_filter']][, 'U'])),
+          new_flag_bismark_filter = sort(GRanges(seqnames = x[['new_flag_bismark_filter']][, 'chr'], ranges = IRanges(start = x[['new_flag_bismark_filter']][, 'pos1'], width = 1), M = x[['new_flag_bismark_filter']][, 'M'], U = x[['new_flag_bismark_filter']][, 'U'])),
+          new_flag_no_filter = sort(GRanges(seqnames = x[['new_flag_no_filter']][, 'chr'], ranges = IRanges(start = x[['new_flag_no_filter']][, 'pos1'], width = 1), M = x[['new_flag_no_filter']][, 'M'], U = x[['new_flag_no_filter']][, 'U'])),
+          CS_new_flag_methylation_extractor = sort(GRanges(seqnames = x[['CS_new_flag_methylation_extractor']][, 1], ranges = IRanges(start = x[['CS_new_flag_methylation_extractor']][, 2] + 1, width = 1), M = x[['CS_new_flag_methylation_extractor']][, 5], U = x[['CS_new_flag_methylation_extractor']][, 6])),
+          CS_old_flag_methylation_extractor = sort(GRanges(seqnames = x[['CS_old_flag_methylation_extractor']][, 1], ranges = IRanges(start = x[['CS_old_flag_methylation_extractor']][, 2] + 1, width = 1), M = x[['CS_old_flag_methylation_extractor']][, 5], U = x[['CS_old_flag_methylation_extractor']][, 6])),
+          QS_new_flag_methylation_extractor = sort(GRanges(seqnames = x[['QS_new_flag_methylation_extractor']][, 1], ranges = IRanges(start = x[['QS_new_flag_methylation_extractor']][, 2] + 1, width = 1), M = x[['QS_new_flag_methylation_extractor']][, 5], U = x[['QS_new_flag_methylation_extractor']][, 6])),
+          QS_old_flag_methylation_extractor = sort(GRanges(seqnames = x[['QS_old_flag_methylation_extractor']][, 1], ranges = IRanges(start = x[['QS_old_flag_methylation_extractor']][, 2] + 1, width = 1), M = x[['QS_old_flag_methylation_extractor']][, 5], U = x[['QS_old_flag_methylation_extractor']][, 6]))
+) # +1 on start position for files from bismark_methylation_extractor since they are bedGraphs
+  save(y, file = 'methylation_calls.RData')
+} else{
+  load('methylation_calls.RData')    
+}
+```
+
+The number of sites in the methylation call sets indiciates there are many differences that need to be resolved:
+```{r}
+sapply(X = y, FUN = length)
+```
+
+`bismark_methylation_extractor`
+-----------------------------------
+
+### Comparison between using `bismark_methylation_extractor` on a queryname sorted version of the Bismark BAM file generated with and without the `--new_flag` option
+
+These files are identical:
+```{r}
+identical(y[['QS_new_flag_methylation_extractor']], y[['QS_old_flag_methylation_extractor']])
+```
+
+### `bismark_methylation_extractor` should be run on a __queryname__ sorted SAM/BAM for paired-end data
+It will give incorrect results if run on a coordinate sorted SAM/BAM since it expects `read_2` to immediately follow `read_1`, which is not the case for a coordinate sorted BAM.
+
+### Conclusions
+* `bismark_methylation_extractor` gives the exact same option regardless of whether the `--new_flag` option was specified in the `bismark` mapping stage. __This is great news!__ 
+* For __paired-end data__, `bismark_methylation_extractor` should be run on a __queryname__ sorted, rather than coordinate sorted, SAM/BAM file.
+
+`bismark_methylation_extractor` vs. `comethylation_v3.py` with `--overlappingPairedEndCheck bismark` flag
+---------------------
+First, need to collapse the results from `bismark_methylation_extractor` across strands, since it outputs a separate count for each strand whereas `comethylation_v3.py` does not.
+```{r}
+bismark <- y[['QS_old_flag_methylation_extractor']]
+table(countOverlaps(bismark, resize(bismark, width = 2))) # Any range with a count == 2 means it has separate counts for the forward and reverse strand
+# Use CpGs in the refence genome to disentangle the strand in the bismark files
+library(BSgenome.Hsapiens.UCSC.hg19)
+hg19_cpgs <- vmatchPattern(pattern = 'CG', subject = Hsapiens)
+lambda_phage_cpgs <- GRanges(seqnames = 'gi|215104|gb|J02459.1|LAMCG', ranges = vmatchPattern(pattern = 'CG', subject = readDNAStringSet('lambda.fa', format = 'fasta'))[[1]], strand = '+')
+ref_cpgs <- sort(c(hg19_cpgs, lambda_phage_cpgs))
+rm(hg19_cpgs, lambda_phage_cpgs)
+ref_cpgs <- ref_cpgs[strand(ref_cpgs) == '+', ] # Only need forward-strand CpGs due to symmetry
+ref_cpgs <- resize(ref_cpgs, width = 1) # Resize so only pointing to C in CpG
+# First, deal with those pointing to the C on the forward strand
+pt1 <- subsetByOverlaps(bismark, ref_cpgs) 
+# Second, deal with those pointing to the G on the forward strand
+pt2 <- subsetByOverlaps(shift(bismark, shift = -1), ref_cpgs, type = 'equal')
+idx <- findOverlaps(pt1, pt2, type = 'equal')
+bismark_cbs <- c(pt1[countQueryHits(idx) == 0, ], pt2[countSubjectHits(idx) == 0, ]) # cbs = "collapsed by strand"
+tmp <- pt1[countQueryHits(idx) == 1, ]
+values(tmp)$M <- values(pt1)$M[queryHits(idx)] + values(pt2)$M[subjectHits(idx)]
+values(tmp)$U <- values(pt1)$U[queryHits(idx)] + values(pt2)$U[subjectHits(idx)]
+bismark_cbs <- sort(c(bismark_cbs, tmp))
+```
+Now, compare to the results from running `comethylation_v3.py` with `--overlappingPairedEndCheck bismark` flag. The two files are identical:
+```{r}
+identical(ranges(bismark_cbs), ranges(y[['new_flag_bismark_filter']]))
+```
+### Conclusions
+`bismark_methylation_extractor` and `comethylation_v3.py` with the `--overlappingPairedEndCheck bismark` flag give identical results. __This is great news!__
+
+```{r, eval = F, echo = F}
+#### Comparison between using bismark_methylation_extractor on a BAM file created with --new_flag active ('new_flag_bismark_methylation_extractor') vs. a BAM file created without the --new_flag option active ('old_flag_bismark_methylation_extractor')
+unique_positions <- y[['old_flag_bismark_methylation_extractor']][!y[['old_flag_bismark_methylation_extractor']] %in% y[['new_flag_bismark_methylation_extractor']], ]
+
+#### Example of problem position ####
+# chr14:20,869,638-20,869,639
+
+#### No consistent orientation of methylation calls in y[['old_flag_bismark_methylation_extractor']] ####
+subsetByOverlaps(y[['old_flag_bismark_methylation_extractor']], GRanges(seqnames = 'chr14', ranges = IRanges(start = 20869638, end = 20869639))) # Points to G in CpG (wrt forward strand)
+
+#### Read goes missing in old_flag_bismark_methylation_extractor SRR400564.3418301_HAL:1133:C010EABXX:8:1208:5417:105438_length=101 ####
+# Might be because I ran bismark_methylation_extractor on coordinate sorted BAM rather than queryname sorted BAM
+
+#### Comparison between new_flag_bismark_filter and old_flag_bismark_methylation_extractor ####
+## Positions unique to one or the other
+common_positions <- countOverlaps(y[['new_flag_bismark_filter']], y[['old_flag_bismark_methylation_extractor']], type = 'equal')
+new_unique_positions <- y[['new_flag_bismark_filter']][! y[['new_flag_bismark_filter']] %in% y[['old_flag_bismark_methylation_extractor']]
+```
+                                      

@@ -7,3 +7,6 @@ test_data/*.bedGraph
 test_data/*.png
 test_data/log/
 *.RData
+test_data/timing/
+test_data/*.md
+test_data/*.html
