@@ -60,3 +60,14 @@ python comethylation_v3.py --nTuple 1 --methylationType CG --overlappingPairedEn
 
 #### Explore results in R (see test_data/explore_methylation_calling.r) ####
 
+#### Some timing comparisons (comethylation_v3.py is faster but at the expense of memory consumption ####
+mkdir test_data/timing
+time python comethylation_v3.py --nTuple 1 --methylationType CG --overlappingPairedEndCheck bismark test_data/QS_new_flag.SRR400564_1.fastq.gz_bismark_pe.bam test_data/timing/new_flag_filter=bismark
+#real    16m49.769s
+#user    16m30.252s
+#sys     0m11.577s
+
+time ./bismark_methylation_extractor -p --no_overlap --comprehensive --ignore 0 --ignore_r2 0 --merge_non_CpG--bedGraph --counts --buffer_size 10G test_data/QS_old_flag.SRR400564_1.fastq.gz_bismark_pe.bam
+#real    95m32.997s
+#user    96m48.782s
+#sys     1m21.358s
