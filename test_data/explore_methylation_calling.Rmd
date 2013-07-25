@@ -38,7 +38,7 @@ if(!load_RData){
   save(y, file = 'methylation_calls.RData')
 } else{
   load('methylation_calls.RData')    
-}
+setw}
 ```
 
 The number of sites in the methylation call sets indiciates there are many differences that need to be resolved:
@@ -87,30 +87,42 @@ tmp <- pt1[countQueryHits(idx) == 1, ]
 values(tmp)$M <- values(pt1)$M[queryHits(idx)] + values(pt2)$M[subjectHits(idx)]
 values(tmp)$U <- values(pt1)$U[queryHits(idx)] + values(pt2)$U[subjectHits(idx)]
 bismark_cbs <- sort(c(bismark_cbs, tmp))
+rm(pt1, pt2, ref_cpgs, tmp, idx)
 ```
 Now, compare to the results from running `comethylation_v3.py` with `--overlappingPairedEndCheck bismark` flag. The two files are identical:
 ```{r}
-identical(ranges(bismark_cbs), ranges(y[['new_flag_bismark_filter']]))
+identical(bismark_cbs, y[['new_flag_bismark_filter']])
 ```
 ### Conclusions
 `bismark_methylation_extractor` and `comethylation_v3.py` with the `--overlappingPairedEndCheck bismark` flag give identical results. __This is great news!__
 
-```{r, eval = F, echo = F}
-#### Comparison between using bismark_methylation_extractor on a BAM file created with --new_flag active ('new_flag_bismark_methylation_extractor') vs. a BAM file created without the --new_flag option active ('old_flag_bismark_methylation_extractor')
-unique_positions <- y[['old_flag_bismark_methylation_extractor']][!y[['old_flag_bismark_methylation_extractor']] %in% y[['new_flag_bismark_methylation_extractor']], ]
-
-#### Example of problem position ####
-# chr14:20,869,638-20,869,639
-
-#### No consistent orientation of methylation calls in y[['old_flag_bismark_methylation_extractor']] ####
-subsetByOverlaps(y[['old_flag_bismark_methylation_extractor']], GRanges(seqnames = 'chr14', ranges = IRanges(start = 20869638, end = 20869639))) # Points to G in CpG (wrt forward strand)
-
-#### Read goes missing in old_flag_bismark_methylation_extractor SRR400564.3418301_HAL:1133:C010EABXX:8:1208:5417:105438_length=101 ####
-# Might be because I ran bismark_methylation_extractor on coordinate sorted BAM rather than queryname sorted BAM
-
-#### Comparison between new_flag_bismark_filter and old_flag_bismark_methylation_extractor ####
-## Positions unique to one or the other
-common_positions <- countOverlaps(y[['new_flag_bismark_filter']], y[['old_flag_bismark_methylation_extractor']], type = 'equal')
-new_unique_positions <- y[['new_flag_bismark_filter']][! y[['new_flag_bismark_filter']] %in% y[['old_flag_bismark_methylation_extractor']]
+Comparison between different `--overlappingPairedEndCheck` options in `comethylation_v3.py`
+----------------------
+### `--overlappingPairedEndCheck none` vs. `--overlappingPairedEndCheck bismark`
+The positions unique to `--overlappingPairedEndCheck none` are from the overlapping sequence in `read_2`, where `read_2` has higher base qualities in the overlapping region than `read_1` (verified manually in GATK for a few examples).
+```{r}
+unique_to_no_filter <- y[['new_flag_no_filter']][!y[['new_flag_no_filter']] %in% y[['new_flag_bismark_filter']], ]
+unique_to_no_filter
 ```
+### `--overlappingPairedEndCheck XM` vs. `--overlappingPairedEndCheck bismark`
+The positions unique to `--overlappingPairedEndCheck bismark` vs. `--overlappingPairedEndCheck XM` are from read-pairs with overlapping sequence where the `XM` tags for `read_1` and `read_2` are different in the overlap  (verified manually in GATK for a few examples).
+```{r}
+unique_to_bismark_filter_against_XM_filter <- y[['new_flag_bismark_filter']][!y[['new_flag_bismark_filter']] %in% y[['new_flag_XM_filter']], ]
+unique_to_bismark_filter_against_XM_filter
+```
+### `--overlappingPairedEndCheck sequence` vs. `--overlappingPairedEndCheck bismark`
+The positions unique to `--overlappingPairedEndCheck bismark` vs. `--overlappingPairedEndCheck sequence` are from read-pairs with overlapping sequence where the sequence for `read_1` and `read_2` are different in the overlap  (verified manually in GATK for a few examples).
+```{r}
+unique_to_bismark_filter_against_sequence_filter <- y[['new_flag_bismark_filter']][!y[['new_flag_bismark_filter']] %in% y[['new_flag_sequence_filter']], ]
+unique_to_bismark_filter_against_sequence_filter
+```
+###  `--overlappingPairedEndCheck sequence` vs. `--overlappingPairedEndCheck XM`
+The positions unique to `--overlappingPairedEndCheck XM` vs. `--overlappingPairedEndCheck sequence` are from read-pairs with overlapping sequence where the sequence for `read_1` and `read_2` are different in the overlap but the `XM` tags are identical  (verified manually in GATK for a few examples). 
+__IMPORTANT:__ Looking at a few of these example manually in GATK revealed the conservative nature of the `--overlappingPairedEndCheck XM` and `--overlappingPairedEndCheck sequence` filters, namely that they throw away all methylation calls from those read-pairs even if none of the methylation calls occur in the overlapping region where the filter is violated. See the example `chr1:404,601-404,602`. I've raised this as an issue on the GitHub issue tracker for `comethylation_v3.py`.
+```{r}
+unique_to_XM_filter_against_sequence_filter <- y[['new_flag_XM_filter']][!y[['new_flag_XM_filter']] %in% y[['new_flag_sequence_filter']], ]
+unique_to_XM_filter_against_sequence_filter
+subsetByOverlaps(unique_to_XM_filter_against_sequence_filter, GRanges(seqnames = 'chr1', ranges = IRanges(start = 404601, end = 404602)))
+```
+
                                       
