@@ -10,3 +10,6 @@ test_data/log/
 test_data/timing/
 test_data/*.md
 test_data/*.html
+new_flag/
+old_flag/
+SRR400564/

@@ -23,9 +23,9 @@ cd ..
 ./bismark --bam --prefix old_flag /home/users/lab0605/hickey/WGBS/aligner_indexes/Bismark_Bowtie1/hg19+lambda_phage/Bismark_Bowtie1_hg19+lambda_phage.genome_folder/ -1 SRR400564/SRR400564_1.fastq.gz -2 SRR400564/SRR400564_2.fastq.gz -o old_flag/
 
 #### Run bismark_methylation_extractor on new_flag.SRR400564_1.fastq.gz_bismark_pe.bam and old_flag.SRR400564_1.fastq.gz_bismark_pe.bam ####
-./bismark_methylation_extractor -p --no_overlap --ignore 0 --ignore_r2 0 -o old_flag --bedGraph --counts old_flag/old_flag.SRR400564_1.fastq.gz_bismark_pe.bam
+./bismark_methylation_extractor -p --no_overlap --ignore 2 --ignore_r2 7 -o old_flag --bedGraph --counts old_flag/old_flag.SRR400564_1.fastq.gz_bismark_pe.bam
 
-./bismark_methylation_extractor -p --no_overlap --ignore 0 --ignore_r2 0 -o new_flag --bedGraph --counts new_flag/new_flag.SRR400564_1.fastq.gz_bismark_pe.bam
+./bismark_methylation_extractor -p --no_overlap --ignore 2 --ignore_r2 7 -o new_flag --bedGraph --counts new_flag/new_flag.SRR400564_1.fastq.gz_bismark_pe.bam
 
 #### Check for differences between new_flag and old_flag files, e.g. using diff ####
 
